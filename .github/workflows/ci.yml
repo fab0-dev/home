@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  recipes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: validate recipes against the schema (Ajv, strict)
+        run: |
+          if ls recipes/*.yml >/dev/null 2>&1; then
+            npx --yes --package=ajv-cli@5.0.0 --package=ajv-formats@3.0.1 -- \
+              ajv validate --spec=draft2020 --strict=true -c ajv-formats \
+              -s schema/pipeline.v1.json -d "recipes/*.yml"
+          else
+            echo "no recipes yet"
+          fi
