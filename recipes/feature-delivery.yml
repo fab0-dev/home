@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://schema.fab0.dev/pipeline.v1.json
+version: 1
+name: feature-delivery
+description: A Feature planned into Stories, each specified, planned into Tasks, implemented and reviewed.
+repos:
+  core: fab0-dev/fab0
+  home: fab0-dev/home
+  plugin: fab0-dev/claude-plugin
+people:
+  po: [eugenefurs]
+status:
+  labels: [Todo, Ready, InProgress, InReview, Done]
+  end: Done
+start: { type: Feature, status: Ready, by: [po] }
+escalate: [po]
+limits: { items: 150, generations: 2 }
+types:
+  Feature:
+    steps:
+      plan:
+        on: { status: Ready }
+        do: agent.routine
+        skill: plan-feature
+        model: large
+        repo: core
+        makes: issues
+        spawn: { type: Story, budget: 10 }
+        approve: { human: [po], via: command }
+      accept:
+        on: { children: { type: Story, all: Done } }
+        do: github.label
+        label: InReview # an act of the assignee; the PO sets Done
+  Story:
+    parent: Feature
+    steps:
+      spec:
+        on: { status: Ready }
+        do: agent.routine
+        skill: write-spec
+        model: large
+        repo: core
+        makes: pr
+        kind: spec
+        approve: { human: [po], via: merge }
+      plan:
+        on: { status: Ready }
+        gates: [{ after: spec }] # starts once the spec is merged, with no label act
+        do: agent.routine
+        skill: plan-tasks
+        model: large
+        repo: core
+        makes: issues
+        spawn: { type: Task, budget: 60 } # per run, across all Stories (L.11)
+        approve: auto
+      review-plan:
+        reviews: plan
+        do: agent.routine
+        skill: review-plan
+        model: large
+        repo: core
+      accept:
+        on: { children: { type: Task, all: Done } }
+        do: github.label
+        label: Done
+  Task:
+    parent: Story
+    steps:
+      implement:
+        on: { status: Ready }
+        gates: [{ dependencies: resolved }]
+        do: agent.routine
+        skill: implement
+        model: medium
+        repo: from_label
+        makes: pr
+        approve: auto
+        limits: { retries: 2, revisions: 3, timeout: 3h }
+        on_done: [{ label: Done }]
+      review:
+        reviews: implement
+        do: agent.routine
+        skill: review-code
+        model: large
+        repo: from_label

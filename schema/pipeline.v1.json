@@ -1,0 +1,1087 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.fab0.dev/pipeline.v1.json",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "the pipeline's name, unique in the file"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repos": {
+      "description": "names for repositories of the installation",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9-]+\\/[A-Za-z0-9._-]+$"
+      }
+    },
+    "people": {
+      "description": "names for by lists",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "the status labels, in their usual order"
+        },
+        "end": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the root's end status"
+        }
+      },
+      "required": [
+        "labels",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "start": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "by": {
+          "$ref": "#/$defs/By"
+        }
+      },
+      "required": [
+        "type",
+        "status"
+      ],
+      "additionalProperties": false,
+      "description": "the condition that starts a run"
+    },
+    "escalate": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "who answers escalations"
+    },
+    "bots": {
+      "description": "bots whose deliveries may wake and start this pipeline's runs (B.6)",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*\\[bot\\]$"
+      }
+    },
+    "limits": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "retries": {
+          "default": 2,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "attempts after the first, per round"
+        },
+        "revisions": {
+          "default": 3,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "revisions per attempt"
+        },
+        "timeout": {
+          "default": "2h",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the session clock"
+        },
+        "review_timeout": {
+          "default": "14d",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the approval clock"
+        },
+        "launch_timeout": {
+          "default": "10m",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "time for a fired session to claim"
+        },
+        "settle": {
+          "default": "2m",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the settle window"
+        },
+        "stall_timeout": {
+          "default": "30d",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the stall guard"
+        },
+        "resync_interval": {
+          "default": "15m",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "how often a run resyncs"
+        },
+        "items": {
+          "default": 200,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "items per run"
+        },
+        "generations": {
+          "default": 3,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "spawning depth below the root"
+        },
+        "act_timeout": {
+          "default": "30m",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the act clock: from an act's delivery until its changes are observed"
+        }
+      },
+      "additionalProperties": false,
+      "description": "run-wide limits"
+    },
+    "types": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/ItemType"
+      },
+      "description": "GitHub issue types of the organization, and their steps"
+    }
+  },
+  "required": [
+    "version",
+    "name",
+    "status",
+    "start",
+    "escalate",
+    "types"
+  ],
+  "additionalProperties": false,
+  "title": "fab0 pipeline",
+  "description": "A fab0 pipeline: one document of .fab0/pipelines.yml",
+  "$defs": {
+    "By": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "people names from `people`, and GitHub logins"
+    },
+    "ItemType": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "description": "the type this type's items are sub-issues of",
+          "type": "string",
+          "minLength": 1
+        },
+        "steps": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Step"
+          }
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "Step": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "on": {
+              "$ref": "#/$defs/Trigger"
+            },
+            "if": {
+              "$ref": "#/$defs/If"
+            },
+            "gates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Gate"
+              }
+            },
+            "limits": {
+              "$ref": "#/$defs/StepLimits"
+            },
+            "escalate": {
+              "description": "overrides the pipeline's escalate",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "on_done": {
+              "description": "label changes once the result is approved",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LabelChange"
+              }
+            },
+            "skill": {
+              "description": "the skill the session invokes, from the work repository's .claude/skills/",
+              "type": "string",
+              "minLength": 1
+            },
+            "repo": {
+              "description": "a name from repos, self, or from_label (the item's repo:<name> label)",
+              "type": "string",
+              "minLength": 1
+            },
+            "do": {
+              "type": "string",
+              "const": "agent.routine"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            "as": {
+              "description": "whose registration runs it; default assignee",
+              "type": "string",
+              "enum": [
+                "assignee",
+                "starter"
+              ]
+            },
+            "makes": {
+              "description": "default none",
+              "type": "string",
+              "enum": [
+                "pr",
+                "issues",
+                "none"
+              ]
+            },
+            "kind": {
+              "description": "for makes: pr; default code",
+              "type": "string",
+              "enum": [
+                "code",
+                "spec",
+                "plan",
+                "markdown"
+              ]
+            },
+            "spawn": {
+              "description": "for makes: issues",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "budget": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "budget"
+              ],
+              "additionalProperties": false
+            },
+            "outputs": {
+              "type": "object",
+              "properties": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {},
+                  "description": "an inline JSON Schema"
+                }
+              },
+              "required": [
+                "schema"
+              ],
+              "additionalProperties": false
+            },
+            "approve": {
+              "$ref": "#/$defs/Approve"
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "on": {
+              "$ref": "#/$defs/Trigger"
+            },
+            "if": {
+              "$ref": "#/$defs/If"
+            },
+            "gates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Gate"
+              }
+            },
+            "limits": {
+              "$ref": "#/$defs/StepLimits"
+            },
+            "escalate": {
+              "description": "overrides the pipeline's escalate",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "on_done": {
+              "description": "label changes once the result is approved",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LabelChange"
+              }
+            },
+            "skill": {
+              "description": "the skill the session invokes, from the work repository's .claude/skills/",
+              "type": "string",
+              "minLength": 1
+            },
+            "repo": {
+              "description": "a name from repos, self, or from_label (the item's repo:<name> label)",
+              "type": "string",
+              "minLength": 1
+            },
+            "do": {
+              "type": "string",
+              "const": "agent.routine"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            "as": {
+              "description": "whose registration runs it; default assignee",
+              "type": "string",
+              "enum": [
+                "assignee",
+                "starter"
+              ]
+            },
+            "reviews": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "description": "the step of the same type this step reviews"
+            }
+          },
+          "required": [
+            "do",
+            "reviews"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "on": {
+              "$ref": "#/$defs/Trigger"
+            },
+            "if": {
+              "$ref": "#/$defs/If"
+            },
+            "gates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Gate"
+              }
+            },
+            "limits": {
+              "$ref": "#/$defs/StepLimits"
+            },
+            "escalate": {
+              "description": "overrides the pipeline's escalate",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "on_done": {
+              "description": "label changes once the result is approved",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LabelChange"
+              }
+            },
+            "skill": {
+              "description": "the skill the session invokes, from the work repository's .claude/skills/",
+              "type": "string",
+              "minLength": 1
+            },
+            "repo": {
+              "description": "a name from repos, self, or from_label (the item's repo:<name> label)",
+              "type": "string",
+              "minLength": 1
+            },
+            "do": {
+              "type": "string",
+              "const": "agent.record"
+            },
+            "by": {
+              "description": "who may claim it besides the assignee",
+              "$ref": "#/$defs/By"
+            },
+            "makes": {
+              "description": "default none",
+              "type": "string",
+              "enum": [
+                "pr",
+                "issues",
+                "none"
+              ]
+            },
+            "kind": {
+              "description": "for makes: pr; default code",
+              "type": "string",
+              "enum": [
+                "code",
+                "spec",
+                "plan",
+                "markdown"
+              ]
+            },
+            "spawn": {
+              "description": "for makes: issues",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "budget": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "budget"
+              ],
+              "additionalProperties": false
+            },
+            "outputs": {
+              "type": "object",
+              "properties": {
+                "schema": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {},
+                  "description": "an inline JSON Schema"
+                }
+              },
+              "required": [
+                "schema"
+              ],
+              "additionalProperties": false
+            },
+            "approve": {
+              "$ref": "#/$defs/Approve"
+            }
+          },
+          "required": [
+            "do"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "on": {
+              "$ref": "#/$defs/Trigger"
+            },
+            "if": {
+              "$ref": "#/$defs/If"
+            },
+            "gates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Gate"
+              }
+            },
+            "limits": {
+              "$ref": "#/$defs/StepLimits"
+            },
+            "escalate": {
+              "description": "overrides the pipeline's escalate",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "on_done": {
+              "description": "label changes once the result is approved",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LabelChange"
+              }
+            },
+            "skill": {
+              "description": "the skill the session invokes, from the work repository's .claude/skills/",
+              "type": "string",
+              "minLength": 1
+            },
+            "repo": {
+              "description": "a name from repos, self, or from_label (the item's repo:<name> label)",
+              "type": "string",
+              "minLength": 1
+            },
+            "do": {
+              "type": "string",
+              "const": "agent.record"
+            },
+            "by": {
+              "description": "who may claim it besides the assignee",
+              "$ref": "#/$defs/By"
+            },
+            "reviews": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "description": "the step of the same type this step reviews"
+            }
+          },
+          "required": [
+            "do",
+            "reviews"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "on": {
+              "$ref": "#/$defs/Trigger"
+            },
+            "if": {
+              "$ref": "#/$defs/If"
+            },
+            "gates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Gate"
+              }
+            },
+            "limits": {
+              "$ref": "#/$defs/StepLimits"
+            },
+            "escalate": {
+              "description": "overrides the pipeline's escalate",
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "do": {
+              "type": "string",
+              "const": "github.label"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "target": {
+              "description": "default self",
+              "type": "string",
+              "enum": [
+                "self",
+                "parent",
+                "root"
+              ]
+            },
+            "as": {
+              "description": "who makes its act; default assignee",
+              "type": "string",
+              "enum": [
+                "assignee",
+                "starter"
+              ]
+            }
+          },
+          "required": [
+            "do",
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Trigger": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "description": "the item holds this status label",
+          "type": "string",
+          "minLength": 1
+        },
+        "joined": {
+          "description": "the item joined the run",
+          "type": "string",
+          "enum": [
+            "created",
+            "linked",
+            "any"
+          ]
+        },
+        "closed": {
+          "description": "the item is closed with this reason",
+          "type": "string",
+          "enum": [
+            "completed",
+            "not_planned",
+            "any"
+          ]
+        },
+        "dependencies": {
+          "description": "the item had blockers and none is open",
+          "type": "string",
+          "const": "resolved"
+        },
+        "pr": {
+          "description": "a PR bound to the item",
+          "type": "string",
+          "enum": [
+            "opened",
+            "merged",
+            "closed"
+          ]
+        },
+        "review": {
+          "description": "the latest review of a bound PR",
+          "type": "string",
+          "enum": [
+            "approved",
+            "changes_requested"
+          ]
+        },
+        "children": {
+          "description": "the item's children of a type hold a status",
+          "$ref": "#/$defs/Children"
+        },
+        "timer": {
+          "description": "time since the item entered its current status",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$"
+        },
+        "by": {
+          "description": "who set the status or wrote the review",
+          "$ref": "#/$defs/By"
+        },
+        "step": {
+          "description": "only PRs bound to this step's instances",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        }
+      },
+      "additionalProperties": false,
+      "description": "the condition that starts a round: exactly one entry"
+    },
+    "Children": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "all": {
+              "type": "string",
+              "minLength": 1,
+              "description": "every counted child holds this status"
+            }
+          },
+          "required": [
+            "type",
+            "all"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "any": {
+              "type": "string",
+              "minLength": 1,
+              "description": "a child holds this status"
+            }
+          },
+          "required": [
+            "type",
+            "any"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "If": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "object",
+          "properties": {
+            "has": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "lacks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "labels"
+      ],
+      "additionalProperties": false,
+      "description": "a filter on the trigger item's labels; when false the round is skipped"
+    },
+    "Gate": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "by": {
+              "$ref": "#/$defs/By"
+            }
+          },
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "pattern": "^\\/[a-z][a-z0-9-]*$"
+            },
+            "by": {
+              "$ref": "#/$defs/By"
+            }
+          },
+          "required": [
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "review": {
+              "type": "string",
+              "const": "approved"
+            },
+            "by": {
+              "$ref": "#/$defs/By"
+            }
+          },
+          "required": [
+            "review"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "dependencies": {
+              "type": "string",
+              "const": "resolved"
+            }
+          },
+          "required": [
+            "dependencies"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "children": {
+              "$ref": "#/$defs/Children"
+            }
+          },
+          "required": [
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "after": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "description": "the latest round of this step on the item is done or skipped"
+            }
+          },
+          "required": [
+            "after"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timer": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*[mhd]$",
+              "description": "time since the round started"
+            }
+          },
+          "required": [
+            "timer"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "a condition that holds the round in pending"
+    },
+    "StepLimits": {
+      "type": "object",
+      "properties": {
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "attempts after the first, per round"
+        },
+        "revisions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "revisions per attempt"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the session clock"
+        },
+        "review_timeout": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the approval clock"
+        },
+        "act_timeout": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[mhd]$",
+          "description": "the act clock: from an act's delivery until its changes are observed"
+        }
+      },
+      "additionalProperties": false,
+      "description": "this step's limits, replacing the pipeline's"
+    },
+    "LabelChange": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "description": "default self",
+          "type": "string",
+          "enum": [
+            "self",
+            "parent",
+            "root"
+          ]
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Approve": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "type": "string",
+          "const": "auto",
+          "description": "a reviewer step reviews this step"
+        },
+        {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "human": {
+                  "description": "who approves",
+                  "$ref": "#/$defs/By"
+                },
+                "via": {
+                  "type": "string",
+                  "enum": [
+                    "merge",
+                    "review"
+                  ]
+                }
+              },
+              "required": [
+                "human",
+                "via"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "human": {
+                  "description": "who approves",
+                  "$ref": "#/$defs/By"
+                },
+                "via": {
+                  "type": "string",
+                  "enum": [
+                    "label"
+                  ]
+                },
+                "label": {
+                  "description": "default approved",
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "human",
+                "via"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "human": {
+                  "description": "who approves",
+                  "$ref": "#/$defs/By"
+                },
+                "via": {
+                  "type": "string",
+                  "enum": [
+                    "command"
+                  ]
+                },
+                "command": {
+                  "description": "default /approve",
+                  "type": "string",
+                  "pattern": "^\\/[a-z][a-z0-9-]*$"
+                }
+              },
+              "required": [
+                "human",
+                "via"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      ],
+      "description": "how the step's result is approved"
+    }
+  }
+}
