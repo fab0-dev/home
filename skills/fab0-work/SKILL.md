@@ -1,11 +1,11 @@
 ---
 name: fab0-work
-description: Works fab0 steps and acts from the person's queue, through the fab0 MCP tools. Use when the person asks to work on fab0, take or continue a fab0 step, make a fab0 act, see what fab0 is waiting on them for, runs /fab0:continue, or names a fab0 run or an item in one.
+description: Works fab0 steps and acts from the person's queue, through the fab0 MCP tools. Use when the person asks to work on fab0, take or continue a fab0 step, make a fab0 act, see what fab0 is waiting on them for, runs /mcp__plugin_fab0_fab0__continue, or names a fab0 run or an item in one.
 license: MIT
 compatibility: Needs the fab0 MCP server (the fab0 plugin for Claude Code), git, and the GitHub CLI (gh) signed in as the person.
 metadata:
   version: "1"
-  plugin: "0.4.0"
+  plugin: "0.4.1"
 ---
 
 # Work fab0 steps and acts
@@ -15,7 +15,7 @@ fab0 runs a pipeline over a team's GitHub issues and pull requests, and hands ea
 - A **step** (`agent.record`) is work the person's own Claude Code does for an item, such as opening a pull request or creating sub-issues.
 - An **act** is a set of GitHub changes fab0 can't make itself: the merge of an approved pull request, then label changes, made with the person's own access.
 
-This is `fab0-work` version `1`, shipped in plugin `0.4.0`.
+This is `fab0-work` version `1`, shipped in plugin `0.4.1`.
 
 ## Rules
 
