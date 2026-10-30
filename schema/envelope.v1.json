@@ -7,10 +7,13 @@
     },
     {
       "$ref": "#/$defs/ActEnvelope"
+    },
+    {
+      "$ref": "#/$defs/TestEnvelope"
     }
   ],
   "title": "fab0 envelope",
-  "description": "A fab0 step or act envelope, as get_envelope answers it",
+  "description": "A fab0 step, act or test envelope, as get_envelope answers it",
   "$defs": {
     "StepEnvelope": {
       "type": "object",
@@ -655,6 +658,55 @@
       ],
       "additionalProperties": false,
       "description": "what a session needs to make one act"
+    },
+    "TestEnvelope": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "type": "number",
+          "const": 1
+        },
+        "kind": {
+          "type": "string",
+          "const": "test"
+        },
+        "registration": {
+          "type": "object",
+          "properties": {
+            "repo": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]+\\/[A-Za-z0-9._-]+$"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            }
+          },
+          "required": [
+            "repo",
+            "model"
+          ],
+          "additionalProperties": false,
+          "description": "the registration the test fire is for"
+        },
+        "api": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the Agent API's base URL"
+        }
+      },
+      "required": [
+        "v",
+        "kind",
+        "registration",
+        "api"
+      ],
+      "additionalProperties": false,
+      "description": "what a test fire's session reads, which verifies its registration (I.5)"
     }
   }
 }
