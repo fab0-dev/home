@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node .claude/skills/fab0-work/scripts/fab0.mjs:*)",
+      "Bash(node .claude/skills/fab0-work/scripts/usage.mjs:*)",
+      "Bash(gh api:*)",
+      "Bash(git push origin fab0/:*)"
+    ]
+  }
+}
