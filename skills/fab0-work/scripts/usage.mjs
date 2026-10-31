@@ -5,9 +5,11 @@
 //
 // It reads the newest ~/.claude/projects/*/<session>.jsonl, the transcript Claude Code writes for the session that
 // CLAUDE_CODE_SESSION_ID names, and sums each model's input, output, cache-read and cache-write tokens over its
-// assistant messages, counting each message id once. It prints them as JSON, as fab0's Usage:
+// assistant messages, counting each message id once. A message whose prompt, its input, cache-read and cache-write
+// tokens, is over 100,000 tokens is summed in a row of its own for its model, with `long: true`, since some models are
+// priced higher for it (stage 5 spec R5.18). It prints them as JSON, as fab0's Usage:
 //
-//   [{ "model": "...", "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }]
+//   [{ "model": "...", "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }, { ..., "long": true }]
 //
 // With no session, no transcript or no assistant message, it prints nothing: no usage, never zeros.
 
@@ -55,13 +57,20 @@ for (const line of readFileSync(path, "utf8").split("\n")) {
   messages.set(message.id, { model: message.model, usage: message.usage });
 }
 
-const models = new Map();
+// A row per model and per whether the message's prompt is long.
+const LONG = 100_000;
+const rows = new Map();
 for (const { model, usage } of messages.values()) {
-  const sum = models.get(model) ?? { model, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
-  sum.input += usage.input_tokens ?? 0;
+  const input = usage.input_tokens ?? 0;
+  const cacheRead = usage.cache_read_input_tokens ?? 0;
+  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+  const long = input + cacheRead + cacheWrite > LONG;
+  const key = JSON.stringify([model, long]);
+  const sum = rows.get(key) ?? { model, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, ...(long && { long }) };
+  sum.input += input;
   sum.output += usage.output_tokens ?? 0;
-  sum.cacheRead += usage.cache_read_input_tokens ?? 0;
-  sum.cacheWrite += usage.cache_creation_input_tokens ?? 0;
-  models.set(model, sum);
+  sum.cacheRead += cacheRead;
+  sum.cacheWrite += cacheWrite;
+  rows.set(key, sum);
 }
-if (models.size > 0) process.stdout.write(`${JSON.stringify([...models.values()])}\n`);
+if (rows.size > 0) process.stdout.write(`${JSON.stringify([...rows.values()])}\n`);
