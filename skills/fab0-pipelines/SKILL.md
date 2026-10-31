@@ -5,7 +5,7 @@ license: MIT
 compatibility: Needs the fab0 MCP server (the fab0 plugin for Claude Code), git, and the GitHub CLI (gh) signed in as the person.
 metadata:
   version: "1"
-  plugin: "0.7.0"
+  plugin: "0.8.0"
 ---
 
 # Write fab0 pipelines

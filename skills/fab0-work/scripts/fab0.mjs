@@ -1,14 +1,18 @@
 // fab0-work's client of fab0's /api/v1/work/ (agent interface sections 9 and 12.1), for a routine's session, where
 // the plugin's MCP tools aren't installed. It runs under Node 22 or newer, with no dependency.
 //
-//   node fab0.mjs <operation> --api <api> --token <token> <<'FAB0_BODY'
-//   { the operation's body on one line, without the token }
+//   node fab0.mjs <operation> --api <api> <<'FAB0_BODY'
+//   { "token": "<token>", and the rest of the operation's body, on one line }
 //   FAB0_BODY
 //
-// It posts the body ({} when standard input is empty) to <api>/work/<operation>, with the step, act or test token as
-// the bearer, and prints fab0's answer as JSON. It exits 1 when fab0 answers an error, which it prints as fab0 gives
-// it ({ error, message, retryAfter? }), and 2 when it sends nothing. It refuses an api that isn't https, and never
-// prints the token.
+// It takes the step, act or test token from the body's `token`, and posts the rest of the body to
+// <api>/work/<operation> with the token as the bearer. The token is never this script's argument, which a process
+// listing shows (stage 5 spec R5.29); the command's text, heredoc included, still holds it.
+//
+// It prints fab0's answer as JSON. It exits 1 when fab0 answers an error, which it prints as fab0 gives it
+// ({ error, message, retryAfter? }), and 2 when it sends nothing: for an argument other than the operation and --api
+// (--token among them), an api that isn't https, a body that isn't a JSON object, or a body whose `token` isn't a fab0
+// step, act or test token. It never prints the token, or any part of a body it can't parse.
 //
 // To complete_step and report_act it adds the session's usage, as the bundled usage.mjs reads it from the transcript,
 // unless the body holds `usage` (stage 5 spec R5.18). It sends only each row's difference from what fab0 has accepted
@@ -25,34 +29,29 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 const OPERATIONS = ["claim_step", "get_envelope", "complete_step", "fail_step", "attach_artifact", "report_act"];
-const USAGE = `usage: fab0.mjs <${OPERATIONS.join("|")}> --api https://<host>/api/v1 --token <token> < body.json`;
+const USAGE = `usage: fab0.mjs <${OPERATIONS.join("|")}> --api https://<host>/api/v1 <<< '{ "token": "<token>", … }'`;
 
-let token = "";
-// What the script prints never holds the token, whatever fab0 or an error says.
-const shown = (text) => (token === "" ? text : text.replaceAll(token, "[token]"));
-
+// fab0's answer, as JSON. It never holds the token, whatever fab0 or an error says. Called only once `token` is set.
 function answer(json, code) {
-  process.stdout.write(`${shown(JSON.stringify(json, null, 2))}\n`);
+  process.stdout.write(`${JSON.stringify(json, null, 2).replaceAll(token, "[token]")}\n`);
   process.exit(code);
 }
 
+// A refusal's reason never quotes the arguments or the body.
 function refuse(reason) {
-  process.stderr.write(`fab0.mjs: ${shown(reason)}\n${USAGE}\n`);
+  process.stderr.write(`fab0.mjs: ${reason}\n${USAGE}\n`);
   process.exit(2);
 }
 
 let args;
 try {
-  args = parseArgs({ options: { api: { type: "string" }, token: { type: "string" } }, allowPositionals: true });
+  args = parseArgs({ options: { api: { type: "string" } }, allowPositionals: true });
 } catch {
-  refuse("the arguments aren't an operation, --api and --token");
+  refuse(`the arguments aren't an operation and --api; the token goes in the body's "token"`);
 }
-token = args.values.token ?? "";
 const [operation, ...rest] = args.positionals;
 
 if (!OPERATIONS.includes(operation) || rest.length > 0) refuse("the operation isn't one of /api/v1/work/'s");
-// A step, act or test token: fab0_s_…, fab0_a_… or fab0_t_….
-if (!/^fab0_[sat]_[A-Za-z0-9_-]+$/.test(token)) refuse("--token isn't a fab0 step, act or test token");
 let api;
 try {
   api = new URL(args.values.api ?? "");
@@ -67,11 +66,16 @@ let input = "";
 if (!process.stdin.isTTY) for await (const chunk of process.stdin) input += chunk;
 let body;
 try {
-  body = JSON.parse(input.trim() === "" ? "{}" : input);
+  body = JSON.parse(input);
 } catch {
   refuse("the body on standard input isn't JSON");
 }
 if (typeof body !== "object" || body === null || Array.isArray(body)) refuse("the body isn't a JSON object");
+// A step, act or test token: fab0_s_…, fab0_a_… or fab0_t_…. It is sent as the bearer only, never in the body.
+if (typeof body.token !== "string" || !/^fab0_[sat]_[A-Za-z0-9_-]+$/.test(body.token))
+  refuse(`the body's "token" isn't a fab0 step, act or test token`);
+const token = body.token;
+delete body.token;
 
 // The session's usage: a row per model and `long`, as fab0's Usage.
 const COUNTS = ["input", "output", "cacheRead", "cacheWrite"];
