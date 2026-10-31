@@ -5,7 +5,7 @@ license: MIT
 compatibility: In the person's Claude Code, the fab0 MCP server (the fab0 plugin), git, and the GitHub CLI (gh) signed in as the person. In a routine, this skill in the repository's .claude/skills/, Node 22 or newer, git and gh.
 metadata:
   version: "2"
-  plugin: "0.6.0"
+  plugin: "0.7.0"
 ---
 
 # Work fab0 steps and acts
@@ -17,7 +17,7 @@ fab0 runs a pipeline over a team's GitHub issues and pull requests, and hands ea
 
 There are two ways in: the person's Claude Code, through the fab0 tools (1 to 3), and a routine's session started by a fab0 fire, through this skill's script (the routine's 1 to 3). Both go on with 4 to 7.
 
-This is `fab0-work` version `2`, shipped in plugin `0.6.0`.
+This is `fab0-work` version `2`, shipped in plugin `0.7.0`.
 
 ## Rules
 
@@ -132,7 +132,7 @@ Before you call, check what fab0 will check, since a report that fails it fails 
 - the outputs against `output.schema`;
 - when `step.makes` is `pr`, the pull request's body as GitHub now holds it: `gh api repos/{owner}/{repo}/pulls/{number} --jq .body`. It must end with the three lines of `markers.body`, which only Claude Code's footer may follow. If it doesn't, fix the body as in 4 and read it back again.
 
-**Usage.** In a routine, run `node .claude/skills/fab0-work/scripts/usage.mjs` and pass what it prints as `usage`. If it prints nothing, leave `usage` out. In the person's Claude Code, leave it out.
+**Usage.** In a routine, `fab0.mjs` reports the session's usage: it adds the tokens the session has used since its last accepted report, read from its transcript, to `complete_step` and `report_act`. Don't pass `usage`. In the person's Claude Code, leave it out too.
 
 A refused report shows its reason; the pipeline decides whether a new attempt follows, claimed again from the queue (2) or by its own fire. If the step can't be done, call `fail_step` with the token and a short reason, which the run shows.
 
