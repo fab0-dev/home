@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://schema.fab0.dev/pipeline.v1.json
+version: 1
+name: routine-flow
+description: Each Story of a Feature specced by its assignee's routine and reviewed by the other member, finished when every Story is Specced.
+people: { team: [eugenefurs, jev-fab0] }
+status: { labels: [Queued, Spec, Specced], end: Specced }
+start: { type: Feature, status: Spec, by: [eugenefurs] }
+escalate: [eugenefurs]
+limits: { settle: 2m, act_timeout: 30m, launch_timeout: 10m }
+types:
+  Feature:
+    steps:
+      finish: { on: { children: { type: Story, all: Specced } }, do: github.label, label: Specced }
+  Story:
+    parent: Feature
+    steps:
+      spec:
+        on: { status: Spec }
+        do: agent.routine
+        skill: spec-story
+        model: small
+        makes: pr
+        kind: spec
+        limits: { timeout: 30m }
+        approve: { human: [team], via: review }
+        on_done: [{ label: Specced }]

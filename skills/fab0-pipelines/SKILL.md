@@ -5,7 +5,7 @@ license: MIT
 compatibility: Needs the fab0 MCP server (the fab0 plugin for Claude Code), git, and the GitHub CLI (gh) signed in as the person.
 metadata:
   version: "1"
-  plugin: "0.8.0"
+  plugin: "0.9.0"
 ---
 
 # Write fab0 pipelines
@@ -28,20 +28,22 @@ Work in a checkout of the repository. Its `owner/name` is in `git remote get-url
 - Read `.fab0/pipelines.yml`, if it exists.
 - Call `validate_pipeline` with `repo`. It answers what fab0 last synced: the file's state, and for each pipeline its `active` and `latest` version and the errors and warnings of the latest. A pipeline whose latest version was rejected still runs on its active one. Show the person any errors.
 - Read the organization's issue types, `gh api orgs/{owner}/issue-types --jq '.[].name'`, and the repository's labels, `gh api repos/{owner}/{repo}/labels --paginate --jq '.[].name'`. If the issue types can't be read, ask the person for them.
+- List the skills the repository holds: the folders of `.claude/skills/` in the checkout. A step that works in another repository invokes that repository's: `gh api repos/{owner}/{repo}/contents/.claude/skills --jq '.[].name'`.
 
 ## 2. Choose a start
 
 Start from one of:
 
 - **the person's description or raw ideas;**
-- **a recipe**, a tested pipeline from `fab0-dev/home`. List their names with `gh api repos/fab0-dev/home/contents/recipes --jq '.[].name | select(endswith(".yml")) | rtrimstr(".yml")'`, and read one with `gh api repos/fab0-dev/home/contents/recipes/<name>.yml -H "Accept: application/vnd.github.raw+json"`. Change its types, status labels, people and repositories to the person's, and as little else as you can;
+- **a recipe**, a tested pipeline from `fab0-dev/home`. List their names with `gh api repos/fab0-dev/home/contents/recipes --jq '.[].name | select(endswith(".yml")) | rtrimstr(".yml")'`, and read one with `gh api repos/fab0-dev/home/contents/recipes/<name>.yml -H "Accept: application/vnd.github.raw+json"`. A recipe names the people, repositories and skills it was tested with: replace each with the person's own, and name only skills their repository holds or will hold. Change its types and status labels to the person's too, and as little else as you can;
 - **a document of the file,** to change.
 
 Ask only what the catalogue can't default, and only what the start doesn't already answer:
 
 - the item types, and which is the parent of which;
 - the status labels, in order, and which one ends a run;
-- who approves each step's result, and who answers escalations, as GitHub logins.
+- who approves each step's result, and who answers escalations, as GitHub logins;
+- the skill each agent step invokes, when their repository doesn't hold it yet: one they will add, or one it holds.
 
 For everything else, use the catalogue's default, and tell the person which defaults you used.
 
