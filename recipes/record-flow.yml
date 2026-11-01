@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://schema.fab0.dev/pipeline.v1.json
+version: 1
+name: record-flow
+description: A Feature planned, its Stories done by their assignees, finished when every Story is Done.
+people:
+  po: [eugenefurs]
+status:
+  labels: [Todo, Ready, InProgress, Done]
+  end: Done
+start: { type: Feature, status: Ready, by: [po] }
+escalate: [po]
+limits: { act_timeout: 2m, resync_interval: 15m }
+types:
+  Feature:
+    steps:
+      plan:
+        on: { status: Ready }
+        do: agent.record
+        skill: plan-feature
+        approve: none
+        on_done: [{ label: InProgress }]
+      finish:
+        on: { children: { type: Story, all: Done } }
+        do: github.label
+        label: Done
+  Story:
+    parent: Feature
+    steps:
+      do:
+        on: { status: Ready }
+        do: agent.record
+        skill: do-story
+        approve: none
+        on_done: [{ label: Done }]
